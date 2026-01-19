@@ -184,6 +184,7 @@ if __name__ == '__main__':
     else:
         logger.info("Reranking papers...")
         papers = rerank_paper(papers, corpus)
+        papers = [p for p in papers if p.score >= 1.0]
         interest_keywords = [
             # 核心神经科学与编解码
             "decoding", "encoding", "neural reconstruction", "brain-to-", "fMRI", "EEG", "MEG", "brain signal",

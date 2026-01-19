@@ -184,7 +184,29 @@ if __name__ == '__main__':
     else:
         logger.info("Reranking papers...")
         papers = rerank_paper(papers, corpus)
-        papers = [p for p in papers if p.score > 0.8]
+        interest_keywords = [
+            # 核心神经科学与编解码
+            "decoding", "encoding", "neural reconstruction", "brain-to-", "fMRI", "EEG", "MEG", "brain signal",
+            # 图像与视频生成
+            "image synthesis", "video generation", "diffusion model", "generative", "image-to-video", "video synthesis",
+            # 文本生成与 NLP
+            "text generation", "large language model", "LLM", "GPT", "language decoding", "nlp",
+            # 医学影像
+            "medical imaging", "segmentation", "mri analysis", "computed tomography", "ultrasound",
+            # 通用大模型与多模态
+            "foundation model", "multimodal", "vision-language", "transformer", "mamba"
+        ]
+        
+        filtered_papers = []
+        for p in papers:
+            # 组合标题和摘要进行全文检索
+            content = (p.title + p.summary).lower()
+            if any(kw.lower() in content for kw in interest_keywords):
+                filtered_papers.append(p)
+        
+        # 使用过滤后的列表替换原列表
+        papers = filtered_papers
+        logger.info(f"Filtered to {len(papers)} papers based on keywords.")
         if args.max_paper_num != -1:
             papers = papers[:args.max_paper_num]
         if args.use_llm_api:

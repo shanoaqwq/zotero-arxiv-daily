@@ -183,7 +183,11 @@ class ArxivPaper:
             if match:
                 conclusion = match.group(0)
         llm = get_llm()
-        prompt = """Given the title, abstract, introduction and the conclusion (if any) of a paper in latex format, generate a one-sentence TLDR summary in __LANG__:
+        prompt = """请作为神经科学与AI领域专家，针对以下论文的标题、摘要、引言和结论（如有），生成一段深度中文学术总结。
+        要求：
+        1. 严禁只输出一句话，字数建议在300字左右。
+        2. 重点说明核心创新点、模型架构（如是否涉及Mamba/Transformer）以及在NSD等数据集上的实验结果。
+        3. 必须使用中文回答。
         
         \\title{__TITLE__}
         \\begin{abstract}__ABSTRACT__\\end{abstract}

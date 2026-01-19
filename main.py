@@ -184,6 +184,7 @@ if __name__ == '__main__':
     else:
         logger.info("Reranking papers...")
         papers = rerank_paper(papers, corpus)
+        papers = [p for p in papers if p.score > 2]
         if args.max_paper_num != -1:
             papers = papers[:args.max_paper_num]
         if args.use_llm_api:

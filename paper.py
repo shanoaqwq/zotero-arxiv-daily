@@ -187,7 +187,7 @@ class ArxivPaper:
         要求：
         1. 严禁只输出一句话，字数建议在300字左右。
         2. 重点说明核心创新点、模型架构以及在数据集上的实验结果。
-        3. 给每篇文章与神经编码码的相关性打个分至于这段总结的开头。
+        3. 给每篇文章与神经编解码的相关性打个分至于这段总结的开头。
         \\title{__TITLE__}
         \\begin{abstract}__ABSTRACT__\\end{abstract}
         __INTRODUCTION__

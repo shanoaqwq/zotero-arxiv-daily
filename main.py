@@ -16,6 +16,7 @@ arxiv.Result._get_pdf_url = _get_pdf_url_patch
 import argparse
 import os
 import sys
+import time
 from dotenv import load_dotenv
 load_dotenv(override=True)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -61,7 +62,7 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
 
 
 def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
-    client = arxiv.Client(num_retries=10,delay_seconds=10)
+    client = arxiv.Client(num_retries=3, delay_seconds=30)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
     if 'Feed error for query' in feed.feed.title:
         raise Exception(f"Invalid ARXIV_QUERY: {query}.")
@@ -69,11 +70,21 @@ def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
         papers = []
         all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']
         bar = tqdm(total=len(all_paper_ids),desc="Retrieving Arxiv papers")
-        for i in range(0,len(all_paper_ids),20):
-            search = arxiv.Search(id_list=all_paper_ids[i:i+20])
-            batch = [ArxivPaper(p) for p in client.results(search)]
+        batch_size = 5
+        for i in range(0, len(all_paper_ids), batch_size):
+            paper_ids = all_paper_ids[i:i + batch_size]
+            search = arxiv.Search(id_list=paper_ids)
+            try:
+                batch = [ArxivPaper(p) for p in client.results(search)]
+            except arxiv.HTTPError as e:
+                logger.warning(f"Skipping arXiv batch {i // batch_size + 1} after API error: {e}")
+                bar.update(len(paper_ids))
+                time.sleep(60)
+                continue
             bar.update(len(batch))
             papers.extend(batch)
+            if i + batch_size < len(all_paper_ids):
+                time.sleep(15)
         bar.close()
 
     else:

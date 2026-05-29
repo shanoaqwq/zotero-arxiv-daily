@@ -61,14 +61,14 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
     return new_corpus
 
 
-def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
+def get_arxiv_paper(query:str, debug:bool=False, max_paper_num:int=100) -> list[ArxivPaper]:
     client = arxiv.Client(num_retries=3, delay_seconds=30)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
     if 'Feed error for query' in feed.feed.title:
         raise Exception(f"Invalid ARXIV_QUERY: {query}.")
     if not debug:
         papers = []
-        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']
+        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']`n        if max_paper_num != -1:`n            all_paper_ids = all_paper_ids[:max_paper_num]
         bar = tqdm(total=len(all_paper_ids),desc="Retrieving Arxiv papers")
         batch_size = 5
         for i in range(0, len(all_paper_ids), batch_size):
@@ -187,7 +187,7 @@ if __name__ == '__main__':
         corpus = filter_corpus(corpus, args.zotero_ignore)
         logger.info(f"Remaining {len(corpus)} papers after filtering.")
     logger.info("Retrieving Arxiv papers...")
-    papers = get_arxiv_paper(args.arxiv_query, args.debug)
+    papers = get_arxiv_paper(args.arxiv_query, args.debug, args.max_paper_num)
     if len(papers) == 0:
         logger.info("No new papers found. Yesterday maybe a holiday and no one submit their work :). If this is not the case, please check the ARXIV_QUERY.")
         if not args.send_empty:

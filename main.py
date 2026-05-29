@@ -68,7 +68,9 @@ def get_arxiv_paper(query:str, debug:bool=False, max_paper_num:int=100) -> list[
         raise Exception(f"Invalid ARXIV_QUERY: {query}.")
     if not debug:
         papers = []
-        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']`n        if max_paper_num != -1:`n            all_paper_ids = all_paper_ids[:max_paper_num]
+        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']
+        if max_paper_num != -1:
+            all_paper_ids = all_paper_ids[:max_paper_num]
         bar = tqdm(total=len(all_paper_ids),desc="Retrieving Arxiv papers")
         batch_size = 5
         for i in range(0, len(all_paper_ids), batch_size):

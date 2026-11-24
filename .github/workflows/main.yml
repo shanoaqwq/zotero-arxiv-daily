@@ -1,39 +1,53 @@
-name: Send emails daily
+name: Deliver curated digest
+run-name: "神经编解码日报 · ${{ inputs.issue_date }}"
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 22 * * *'
-
+    inputs:
+      issue_date:
+        description: Issue date in Asia/Shanghai (YYYY-MM-DD)
+        type: string
+        required: true
+      digest:
+        description: Curated issue JSON (title, citation, source, question, method, result, implication, figure)
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: curated-digest-${{ inputs.issue_date }}
+  cancel-in-progress: false
 jobs:
-  calculate-and-send:
+  deliver:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          repository: ${{ vars.REPOSITORY }}
-          ref: ${{ vars.REF }}
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Run script
+          persist-credentials: false
+      - name: Check for an earlier delivery
         env:
-          ZOTERO_ID: ${{ secrets.ZOTERO_ID }}
-          ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
-          ZOTERO_IGNORE: ${{ vars.ZOTERO_IGNORE }}
-          SEND_EMPTY: ${{ vars.SEND_EMPTY }}
-          ARXIV_QUERY: ${{ secrets.ARXIV_QUERY }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_DATE: ${{ inputs.issue_date }}
+        run: |
+          set -eu
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs?event=workflow_dispatch&per_page=100")
+          if jq -e --arg name "神经编解码日报 · $ISSUE_DATE" --arg id "$GITHUB_RUN_ID" 'any(.workflow_runs[]; .display_title == $name and (.id | tostring) != $id and .conclusion == "success")' <<< "$runs" > /dev/null; then
+            echo "An earlier delivery for this issue already succeeded."
+            exit 1
+          fi
+      - name: Check Chinese font support
+        run: |
+          if ! fc-list :lang=zh family | grep -q .; then
+            sudo apt-get -qq update
+            sudo apt-get -qq install -y fonts-noto-cjk
+          fi
+      - name: Prepare attachments and deliver
+        env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SENDER: ${{ secrets.SENDER }}
-          RECEIVER: ${{ secrets.RECEIVER }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-          MAX_PAPER_NUM: ${{ secrets.MAX_PAPER_NUM }}
-          USE_LLM_API: ${{ secrets.USE_LLM_API }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
-          MODEL_NAME: ${{ secrets.MODEL_NAME }}
-          LANGUAGE: ${{ vars.LANGUAGE }}
-        run: |
-          uv run main.py
+          RECEIVER: ${{ secrets.RECEIVER }}
+        run: python3 deliver_digest.py
